@@ -14,7 +14,7 @@ HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>TikTok V23 Ultimate</title>
+    <title>BOT CHECK ACC TIK TOK</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body { background-color: #0d1117; color: #c9d1d9; font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; padding: 10px; }
