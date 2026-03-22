@@ -8,7 +8,7 @@ from datetime import datetime
 app = Flask(__name__)
 scraper = cloudscraper.create_scraper(browser={'browser': 'chrome', 'platform': 'android', 'mobile': True})
 
-# Lưu lịch sử trong bộ nhớ tạm (Sẽ reset khi restart server)
+# Lưu lịch sử trong bộ nhớ tạm
 history_log = []
 
 HTML_TEMPLATE = """
@@ -19,24 +19,18 @@ HTML_TEMPLATE = """
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         body { background-color: #0d1117; color: #c9d1d9; font-family: sans-serif; margin: 0; padding: 0; }
-        /* Header & Menu */
         .header { background: #161b22; padding: 15px; display: flex; align-items: center; border-bottom: 1px solid #30363d; }
         .menu-btn { font-size: 24px; cursor: pointer; margin-right: 15px; color: #ff0050; }
         .sidebar { height: 100%; width: 0; position: fixed; z-index: 1; top: 0; left: 0; background-color: #161b22; overflow-x: hidden; transition: 0.3s; padding-top: 60px; border-right: 1px solid #30363d; }
         .sidebar a { padding: 15px 25px; text-decoration: none; font-size: 18px; color: #c9d1d9; display: block; border-bottom: 1px solid #21262d; }
-        .sidebar a:hover { background: #21262d; }
         .closebtn { position: absolute; top: 10px; right: 20px; font-size: 30px; color: #ff0050; text-decoration: none; }
-        
         .container { padding: 20px; max-width: 600px; margin: auto; }
         textarea { width: 93%; height: 120px; padding: 12px; border-radius: 8px; border: 1px solid #30363d; background: #0d1117; color: white; margin-bottom: 15px; font-size: 14px; }
         .btn { width: 100%; padding: 12px; background: #ff0050; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        
-        /* Table */
         .res-table { width: 100%; margin-top: 20px; border-collapse: collapse; font-size: 12px; }
         .res-table th { background: #21262d; padding: 10px; border: 1px solid #30363d; text-align: left; }
         .res-table td { padding: 10px; border: 1px solid #30363d; }
         .green { color: #3fb950; font-weight: bold; }
-        .red { color: #f85149; }
     </style>
 </head>
 <body>
@@ -85,7 +79,7 @@ HTML_TEMPLATE = """
                 <tr>
                     <th>User</th>
                     <th>Tuổi</th>
-                    <th>View</th>
+                    <th>Follower</th>
                     <th>Tim</th>
                     <th>Score</th>
                 </tr>
@@ -95,7 +89,7 @@ HTML_TEMPLATE = """
                 <tr>
                     <td>@{{ r.u }}</td>
                     <td>{{ r.a }} ngày</td>
-                    <td>{{ r.v }}</td>
+                    <td>{{ r.f }}</td>
                     <td>{{ r.l }}</td>
                     <td class="green">{{ r.s }}%</td>
                 </tr>
@@ -127,22 +121,27 @@ def index():
                 if r.status_code == 200:
                     html = r.text
                     v_ids = re.findall(r'"id":"(\d{18,20})"', html)
-                    v_match = re.search(r'"playCount":(\d+)', html)
+                    f_match = re.search(r'"followerCount":(\d+)', html)
                     l_match = re.search(r'"heartCount":(\d+)', html)
                     
-                    view = int(v_match.group(1)) if v_match else 0
+                    fol = int(f_match.group(1)) if f_match else 0
                     lik = int(l_match.group(1)) if l_match else 0
                     age = 0
                     if v_ids:
                         ts = int(min(v_ids)) >> 32
                         age = (datetime.now() - datetime.fromtimestamp(ts)).days
                     
-                    score = min(100, (age // 10) + (lik // 500) + (view // 5000))
-                    res_data = {'u': u, 'a': age, 'v': f"{view:,}", 'l': f"{lik:,}", 's': score}
+                    # CÔNG THỨC CHẤM ĐIỂM MỚI (Loại bỏ View)
+                    # Tuổi (max 50đ) + Tim (max 30đ) + Follower (max 20đ)
+                    s_age = min(50, age // 8)
+                    s_lik = min(30, lik // 300)
+                    s_fol = min(20, fol // 500)
+                    score = s_age + s_lik + s_fol
+                    
+                    res_data = {'u': u, 'a': age, 'f': f"{fol:,}", 'l': f"{lik:,}", 's': score}
                     results.append(res_data)
-                    # Lưu vào lịch sử
                     history_log.append({'u': u, 's': score, 't': datetime.now().strftime('%H:%M:%S')})
-                    time.sleep(1)
+                    time.sleep(1.2)
             except: continue
     return render_template_string(HTML_TEMPLATE, results=results, page='index')
 
